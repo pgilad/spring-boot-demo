@@ -213,6 +213,97 @@ And off course there are easy ways to auto add application information (such as 
 
 Enough with all this setup, it's cool, but where's the real stuff?
 
+## Reactive Vs. Imperative, or why Reactive?
+
+Let's implement a simple dictionary word count algorithm, twice as imperative (with naive assumptions) and once as reactive.
+Reactive is meant for observable and async operations, but it's also awesome for regular stream manipulations because of the operators.
+
+First, our basic story, which we'll extract the top N word count frequencies, with words bounded by a space, and lowercase.
+
+We'll implement this in our `HelloController`, but you can use any other controller as well.
+
+```java
+private static String story = "the quick brown fox jumped over the lazy fence and then noticed another quick black fox " +
+            "that was much quicker than the original fox but the original fox was able to jump higher over the fence";
+```
+
+First, our initial naive implementation:
+
+```java
+@GetMapping("/word-count/v1")
+public Flux<Tuple2<String, Long>> wordCount1(@RequestParam(defaultValue = "2") Integer limit) {
+    String[] words = story.split(" ");
+    HashMap<String, Long> counts = new HashMap<>();
+    for (String word : words) {
+        Long count = counts.getOrDefault(word, 0L) + 1;
+        counts.put(word.toLowerCase(), count);
+    }
+    Set<Long> values = new HashSet<>(counts.values());
+    final ArrayList<Long> sortedCounts = new ArrayList<>(values);
+    sortedCounts.sort(Collections.reverseOrder());
+
+    ArrayList<Tuple2<String, Long>> response = new ArrayList<>();
+    for (var i = 0; i < Math.min(limit, sortedCounts.size()); i++) {
+        Long count = sortedCounts.get(i);
+        for (Map.Entry<String, Long> entry : counts.entrySet()) {
+            if (entry.getValue().equals(count)) {
+                response.add(Tuples.of(entry.getKey(), count));
+            }
+        }
+    }
+
+    return Flux.fromIterable(response);
+}
+```
+
+Let's verify that it works: `http :9090/word-count/v1`. You should see a list of tuples of words and their frequency.
+
+Now, our second improved implementation using `TreeMap`. The details here don't really matter, as we're not comparing performance, but ease of implementations.
+
+```java
+@GetMapping("/word-count/v2")
+public Flux<Tuple2<String, Long>> wordCount2(@RequestParam(defaultValue = "2") Integer limit) {
+    String[] words = story.split(" ");
+
+    HashMap<String, Long> counts = new HashMap<>();
+    TreeMap<String, Long> sortedCounts = new TreeMap<String, Long>(Comparator.comparing(counts::get, Comparator.reverseOrder()));
+
+    for (String word : words) {
+        counts.merge(word.toLowerCase(), 1L, Math::addExact);
+    }
+    sortedCounts.putAll(counts);
+    ArrayList<Tuple2<String, Long>> response = new ArrayList<>();
+    for (var i = 0; i < limit; i++) {
+        Map.Entry<String, Long> entry = sortedCounts.pollFirstEntry();
+        if (entry == null) {
+            // no more entries in map
+            break;
+        }
+        response.add(Tuples.of(entry.getKey(), entry.getValue()));
+    }
+
+    return Flux.fromIterable(response);
+}
+```
+
+Now finally, let's see how it's done using Reactive Streams (1 possible solution):
+
+```java
+@GetMapping("/word-count/v3")
+public Flux<Tuple2<String, Long>> wordCount3(@RequestParam(defaultValue = "2") Integer limit) {
+    return Flux.fromArray(story.split(" "))
+            .map(String::toLowerCase)
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+            .flatMapIterable(Map::entrySet)
+            .sort((a, b) -> b.getValue().compareTo(a.getValue()))
+            .map(a -> Tuples.of(a.getKey(), a.getValue()))
+            .take(limit);
+}
+```
+
+Sweet right? Now imagine you need to do async, or multi-threading, or timeouts or buffering. Adding that to the reactive impl. is as easy as adding a new line.
+Adding those to the imperative impl. is hard.
+
 ## Adding Reactive Mongo
 
 Add the following line to your `build.gradle` under `dependencies`:
