@@ -2,6 +2,19 @@
 
 > A guide to bootstrapping a basic Spring Boot Webflux Application, with Reactive Mongo
 
+  * [Prerequisites](#prerequisites)
+  * [Setup](#setup)
+  * [Hello World](#hello-world)
+  * [Adding logs](#adding-logs)
+  * [Changing the port](#changing-the-port)
+  * [Health checks](#health-checks)
+  * [Info APIs](#info-apis)
+  * [Reactive Vs. Imperative, or why Reactive?](#reactive-vs-imperative-or-why-reactive)
+  * [Adding Reactive Mongo](#adding-reactive-mongo)
+  * [Validation](#validation)
+  * [Last play - Server Sent Events (SSE)](#last-play---server-sent-events-sse)
+  * [Where to go from here](#where-to-go-from-here)
+
 ## Prerequisites
 
 - IntelliJ IDEA 2018.2.3 (Ultimate Edition) or newer
