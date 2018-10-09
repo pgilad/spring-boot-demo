@@ -39,6 +39,11 @@
 - Setup + Add `Annotation Processors -> Enable annotation processing`
 - Run application (*hint*: currently it does nothing)
 
+## Hot Tips
+
+- Enable IntelliJ Auto-Import of dependencies (Editor -> General -> Auto Import -> Add unambiguous imports on the fly
+- Copy-Paste code directly into package (project explorer) to create component automatically !!
+
 ## Hello World
 
 Let's add a simple controller with mapping to respond to an `hello` request from the client:
